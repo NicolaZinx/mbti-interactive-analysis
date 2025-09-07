@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>16型人格心动瞬间 - 深度交互分析</title>
+    <!-- 引入Google Fonts: Noto Serif SC用于标题, Noto Sans SC用于正文 -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;600;900&display=swap" rel="stylesheet">
+    <!-- 引入html2canvas库用于截图功能 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --color-analyst: #8e44ad; /* 紫色 */
+            --color-diplomat: #27ae60; /* 绿色 */
+            --color-sentinel: #2980b9; /* 蓝色 */
+            --color-explorer: #f39c12; /* 橙色 */
+            --bg-dark: #1E2A3A;
+            --text-light: #EAEAEA;
+            --text-dark: #333;
+            --text-muted: #888;
+        }
+
+        body {
+            background-color: #f4f7f6;
+            margin: 0;
+            font-family: 'Noto Sans SC', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        /* --- 页面切换逻辑 --- */
+        .page {
+            display: none;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .page.active {
+            display: block;
+        }
+
+        /* --- 第一层：封面页 --- */
+        #cover-page {
+            display: flex; /* 初始显示 */
+            justify-content: center;
+            align-items: center;
+            background-color: #121212;
+            cursor: pointer;
+            transition: opacity 0.5s ease;
+        }
+        .cover-container {
+            width: 1200px;
+            aspect-ratio: 2.35 / 1;
+            background-color: var(--bg-dark);
+            position: relative;
+            overflow: hidden;
+            color: var(--text-light);
+            background-image: radial-gradient(ellipse at 50% 55%, rgba(44, 62, 80, 0.7) 0%, var(--bg-dark) 65%);
+            font-family: 'Noto Serif SC', serif;
+            transition: transform 0.3s ease;
+        }
+        #cover-page:hover .cover-container {
+            transform: scale(1.02);
+        }
+        .emotional-hook {
+            position: absolute; top: 48%; left: 50%; transform: translate(-50%, -50%); text-align: center; width: 100%;
+        }
+        .emotional-hook h1 {
+            font-size: 72px; font-weight: 900; color: #FF6F61; margin: 0; letter-spacing: 4px;
+            text-shadow: 0 0 20px rgba(255, 111, 97, 0.5), 0 0 5px rgba(255, 111, 97, 0.3);
+            line-height: 1.2;
+        }
+        .cover-prompt {
+            position: absolute; bottom: 15%; left: 50%; transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.7); font-size: 18px; font-family: 'Noto Sans SC', sans-serif;
+            letter-spacing: 2px; padding: 8px 16px; background: rgba(0,0,0,0.2); border-radius: 5px;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+        #cover-page:hover .cover-prompt { opacity: 1; }
+
+        /* --- 第二层：选择矩阵页 --- */
+        #selection-page .container {
+            max-width: 1400px; margin: 0 auto; padding: 50px 20px;
+        }
+        #selection-page h1 {
+            text-align: center; font-family: 'Noto Serif SC', serif; font-size: 36px;
+            color: var(--text-dark); margin-bottom: 40px;
+        }
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 25px;
+        }
+        .personality-select-card {
+            aspect-ratio: 1 / 1.1; border-radius: 12px;
+            padding: 20px; box-sizing: border-box;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            text-align: center; cursor: pointer; transition: all 0.3s ease;
+            color: white; text-decoration: none;
+            border-bottom: 4px solid rgba(0,0,0,0.2);
+        }
+        .personality-select-card:hover {
+            transform: translateY(-8px); box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+        }
+        .personality-select-card .code {
+            font-size: 32px; font-weight: 700; margin-bottom: 10px; font-family: 'Noto Sans SC', sans-serif;
+        }
+        .personality-select-card .title {
+            font-size: 18px; font-weight: 400;
+        }
+        .analyst { background-color: var(--color-analyst); }
+        .diplomat { background-color: var(--color-diplomat); }
+        .sentinel { background-color: var(--color-sentinel); }
+        .explorer { background-color: var(--color-explorer); }
+
+        /* --- 第三层：详情页 --- */
+        #detail-page {
+            background-color: #eef2f5;
+        }
+        .detail-header {
+            padding: 40px; color: white; text-align: center;
+        }
+        .detail-header h1 { margin: 0; font-family: 'Noto Serif SC', serif; font-size: 42px; }
+        .detail-header p { margin: 10px 0 0; font-size: 20px; opacity: 0.9; }
+        
+        .detail-content-wrapper {
+            max-width: 900px; margin: -50px auto 50px auto;
+            position: relative; z-index: 10;
+        }
+        /* 可截图区域 */
+        #capture-area {
+            background: white; border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .tabs {
+            display: flex; border-bottom: 1px solid #eee;
+        }
+        .tab-button {
+            flex: 1; padding: 18px; text-align: center;
+            font-size: 18px; font-weight: 500;
+            cursor: pointer; background: #f8f9fa; color: #888;
+            transition: all 0.2s ease; border: none;
+        }
+        .tab-button.active {
+            background: white; color: var(--active-color, #333);
+            border-bottom: 3px solid var(--active-color, #333);
+        }
+        .tab-content {
+            display: none; padding: 30px 40px;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        /* 详情页内容排版 */
+        #simple-content h2, #detailed-content h3 {
+            font-family: 'Noto Serif SC', serif;
+            font-size: 24px; color: var(--text-dark);
+            margin-top: 0; margin-bottom: 15px;
+        }
+        #simple-content p {
+            font-size: 17px; line-height: 1.8; color: #555; margin-bottom: 25px;
+        }
+        .keywords { display: flex; flex-wrap: wrap; gap: 12px; }
+        .keyword {
+            padding: 6px 16px; border-radius: 20px; font-size: 15px; font-weight: 500;
+            background-color: var(--bg-tint, #f0f0f0); color: var(--active-color, #333);
+        }
+        
+        #detailed-content ul { list-style: none; padding: 0; }
+        #detailed-content li { margin-bottom: 25px; }
+        #detailed-content h4 {
+            font-size: 18px; font-weight: 700; color: #444; margin-bottom: 8px;
+            display: flex; align-items: center;
+        }
+        #detailed-content h4 span { margin-right: 10px; font-size: 22px; }
+        #detailed-content p {
+            font-size: 16px; line-height: 1.9; color: #555; margin: 0; padding-left: 32px;
+        }
+        #detailed-content strong { color: var(--active-color, #333); }
+
+        .actions {
+            margin-top: 30px; display: flex; justify-content: center; gap: 20px;
+        }
+        .action-button {
+            padding: 12px 25px; font-size: 16px; font-weight: 500;
+            border-radius: 8px; border: none; cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        #back-button {
+            background-color: #777; color: white;
+        }
+        #back-button:hover { background-color: #555; }
+        #screenshot-button {
+            background-color: var(--active-color, #333); color: white;
+        }
+        #screenshot-button:hover { opacity: 0.85; }
+
+        /* 响应式设计 */
+        @media (max-width: 1200px) {
+            .cover-container { width: 95%; }
+            .emotional-hook h1 { font-size: 6vw; }
+        }
+        @media (max-width: 992px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); }
+            .detail-content-wrapper { width: 90%; margin: -40px auto 40px auto; }
+        }
+        @media (max-width: 600px) {
+            .grid-container { grid-template-columns: 1fr; }
+            #selection-page .container { padding: 30px 15px; }
+            .tab-content { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 第一层：封面页 -->
+    <main id="cover-page" class="page active">
+        <div class="cover-container">
+            <div class="emotional-hook">
+                <h1>心动的信号<br>早有答案？</h1>
+            </div>
+            <div class="cover-prompt">点击进入探索</div>
+        </div>
+    </main>
+
+    <!-- 第二层：选择矩阵页 -->
+    <main id="selection-page" class="page">
+        <div class="container">
+            <h1>16型人格心动瞬间分析</h1>
+            <div id="personality-grid" class="grid-container">
+                <!-- JS动态生成卡片 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- 第三层：详情页 -->
+    <main id="detail-page" class="page">
+        <header id="detail-header" class="detail-header">
+            <h1 id="detail-code-title"></h1>
+            <p id="detail-subtitle"></p>
+        </header>
+
+        <div class="detail-content-wrapper">
+            <div id="capture-area">
+                <div class="tabs">
+                    <button id="simple-tab-btn" class="tab-button active">心动速写</button>
+                    <button id="detailed-tab-btn" class="tab-button">深度动机</button>
+                </div>
+
+                <div id="simple-content" class="tab-content active">
+                    <!-- JS动态填充 -->
+                </div>
+
+                <div id="detailed-content" class="tab-content">
+                    <!-- JS动态填充 -->
+                </div>
+            </div>
+
+            <div class="actions">
+                <button id="back-button" class="action-button">← 返回选择页</button>
+                <button id="screenshot-button" class="action-button">📷 生成分享图</button>
+            </div>
+        </div>
+    </main>
+
+<script>
+// 使用 "use strict" 模式保证代码严谨性
+"use strict";
+
+const personalityData = {
+    'INTJ': {
+        code: 'INTJ', title: '建筑师', group: 'analyst',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>当他们的防御被攻破时。INTJ对汹涌的情绪和快速变化的感官刺激不耐受，习惯一切尽在掌控。但当他们全身心投入感官刺激和身体享受时，防御最薄弱，此时若有人能让他们放下戒备，会瞬间心动。</p>
+            <div class="keywords">
+                <span class="keyword">攻破防御</span>
+                <span class="keyword">感官享受</span>
+                <span class="keyword">失控的信任</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>理性至上，追求绝对掌控，对不可预测的情绪和感官刺激建立高度心理防御。这通常源于一种深刻的<strong>对失控的焦虑</strong>（与劣势功能Se有关）。他们倾向于运用主导功能<strong>内向直觉（Ni）</strong> 构建未来蓝图，并用辅助功能<strong>外向思维（Te）</strong> 严格执行，以此防御内在的混乱。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康发展的INTJ</strong>能适度欣赏即兴之美；而<strong>压力状态下的INTJ</strong>可能更加僵化固执，完全排斥感官享受，心动模式也更难触发。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相反性吸引</strong>。心动常源于心理防御被“攻破”，即允许自己沉浸于感官体验（劣势Se的宣泄）。这并非被相似的计划性吸引，而是被一种能安全地引导他们<strong>释放被压抑的劣势功能</strong>的力量所吸引。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对“全能控制”的疲惫感。深层动机是渴望<strong>暂时卸下沉重的防御盔甲</strong>，体验一种无需思考、纯粹存在的状态，并学习信任他人或环境来接管控制权。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>回避型依恋</strong>的INTJ可能显得更加“冰山”，难以进入一段关系；而<strong>安全型依恋</strong>的INTJ则能更好地享受这种放松。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>INTJ类似部落中的<strong>战略规划师</strong>，他们需要确保生存资源的长远安全。因此，其心动模式可视为对一位能带来“即时生存资源”（如食物、感官愉悦、放松）的伴侣的深层需求，以平衡其长期的资源焦虑。</p></li>
+            </ul>
+        `
+    },
+    'INTP': {
+        code: 'INTP', title: '逻辑学家', group: 'analyst',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>心动源于“脑洞”的连接。如果两个人的思维（脑洞/虫洞）能连接在一起，在宇宙级的思维碰撞中产生共鸣，就会心动。</p>
+            <div class="keywords">
+                <span class="keyword">思维共鸣</span>
+                <span class="keyword">脑洞连接</span>
+                <span class="keyword">哲学契合</span>
+            </div>
+        `,
+        detailed_html: `
+             <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>通常抽离现实，沉迷于内在的思想网络和模型构建（主导功能<strong>内向思维Ti</strong>）。他们的“隐藏的集体需求”常源于劣势功能<strong>外向情感（Fe）</strong>，即难以融入现实情感社群而产生的孤独感。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>成熟的INTP</strong>能发展出良好的Fe，变得温暖、幽默且合群；<strong>不成熟的INTP</strong>则可能更加疏离，甚至愤世嫉俗，其“脑洞连接”的心动可能仅停留在幻想层面。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>极端相似性吸引</strong>。心动本质常是思维系统的连接而非对人的简单好感。这是一种<strong>思维层面的“神交”体验</strong>，其核心是寻找认知功能的镜像（Ti-Ne与Ti-Ne的共鸣）。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对抗存在主义的孤独。深层动机是渴望自己的整个内在宇宙能被另一个相似的宇宙<strong>完全地、无需翻译地理解和映照</strong>，从而确认自身思维世界的真实性与价值。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>疏离型依恋</strong>会加剧INTP的孤独感，使其更难付诸行动；<strong>安全型依恋</strong>则能鼓励他们勇敢地分享内心世界。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>INTP如同部落中的<strong>发明家/理论家</strong>，负责创新工具和理解世界原理。他们的心动模式是对“思想伴侣”的需求，以确保其创新的想法能被理解、传承，从而在进化中留下智慧的火种。</p></li>
+            </ul>
+        `
+    },
+    'ENTJ': {
+        code: 'ENTJ', title: '指挥官', group: 'analyst',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>被理解其“美强惨”的脆弱面。ENTJ不常显露脆弱，但当有人能默默陪伴，在其需要时坚定支持，并理解其行为动机，尤其是看到并接纳其脆弱和压力时，会真正心动。</p>
+            <div class="keywords">
+                <span class="keyword">理解脆弱</span>
+                <span class="keyword">坚定支持</span>
+                <span class="keyword">默默陪伴</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>以目标和效率为导向（Te主导），对外呈现无敌的“英雄”形象。其“美强惨”中的“惨”常与被压抑的劣势功能<strong>内向情感（Fi）</strong> 有关——即难以觉察和表达个人情感与脆弱。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>杰出的ENTJ</strong>是富有远见和感召力的领袖；<strong>不健康的ENTJ</strong>可能成为冷酷无情的暴君，完全否认自身情感需求，也无法接纳他人的脆弱。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>互补性吸引</strong>。他们通常不需要另一个指挥官，而需要一个“基石”式的伴侣。吸引他们的是能为其提供<strong>无条件的情绪支持（补足Fi）</strong> 并<strong>理解其脆弱（看到其英雄面具下的真实自我）</strong> 的人。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对“被看见”的渴望。深层动机是希望有人能穿透其社会成就和强大外壳，<strong>无条件地接纳那个不被自己接纳的、脆弱的真实自我</strong>。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>恐惧型依恋</strong>的ENTJ可能在亲密与疏远间摇摆；<strong>安全型依恋</strong>则能让他们安心地展现脆弱。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ENTJ是天生的<strong>酋长或军事统帅</strong>，负责指挥群体获取资源、赢得竞争。其心动模式是对“大后方”的需求——一个稳定、忠诚、能提供情感慰藉的伴侣，确保他们在前线征战时不至于精神崩溃。</p></li>
+            </ul>
+        `
+    },
+    'ENTP': {
+        code: 'ENTP', title: '辩论家', group: 'analyst',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>捣蛋行为被真心欣赏。ENTP渴望被关注和接纳，如果有人不仅不责怪其捣乱，反而真心欣赏其机灵和创意（甚至以身作则包容），会感到被暴击般的心动。</p>
+            <div class="keywords">
+                <span class="keyword">欣赏捣蛋</span>
+                <span class="keyword">以德报怨</span>
+                <span class="keyword">机智共鸣</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>通过辩论和挑战规则（主导功能<strong>外向直觉Ne</strong>）来探索世界，其“捣蛋”行为是Ne-Ti的典型输出，但背后常是劣势功能<strong>内向情感（Fi）</strong> 对“被接纳”的渴望。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ENTP</strong>是富有魅力的创新者；<strong>发展受阻的ENTP</strong>可能沦为尖酸刻薄的“杠精”，其捣蛋行为从求知变为破坏，难以建立真正亲密的关系。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>互补性吸引</strong>。他们常被“以德报怨”的包容所吸引。对方对其捣蛋行为的欣赏，实质是一种<strong>母性的、无条件的认可</strong>，这直接满足了他们深层的情感需求。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>渴望回归童年般的游戏自由。深层动机是找到一个<strong>安全的“容器”</strong>（客体关系理论），在这个容器内，他们可以尽情捣蛋和探索，而无需担心被指责和抛弃。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ENTP可能会不断“测试”对方的包容度，反而吓跑对方；<strong>安全型依恋</strong>能让他们感到安心，从而减少无意义的挑衅行为。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ENTP是部落中的<strong>谋士或侦察兵</strong>，负责探索新领域、发现新机会和挑战旧规则。他们的心动模式是对一位“稳定大本营守护者”的需求，这位伴侣能给予他们无限探索的自由，并永远欢迎他们带着新发现回家。</p></li>
+            </ul>
+        `
+    },
+    'INFJ': {
+        code: 'INFJ', title: '提倡者', group: 'diplomat',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>遇到“命中注定的克星”。INFJ常觉高处不胜寒，习惯向下兼容。当在现实中遇到棋逢对手、思维高度相似的人，会有一种被“毁灭”或“克制”般的强烈心动，觉得对方是知己也是对手。</p>
+            <div class="keywords">
+                <span class="keyword">棋逢对手</span>
+                <span class="keyword">思维克星</span>
+                <span class="keyword">灵魂共鸣</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>习惯于作为观察者和洞察者（Ni主导），通过Fe（外向情感）调和氛围，常感到“高处不胜寒”。这容易导致一种深刻的<strong>存在性孤独</strong>，感觉无人能抵达其精神深度。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>成熟的INFJ</strong>是富有同情心和远见的导师，能连接抽象与具体；<strong>不健康的INFJ</strong>可能变得神秘莫测、固执己见，甚至用自己的洞察力去操纵他人情感。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相似性吸引（棋逢对手）</strong>。他们通常不被“向下兼容”的对象吸引，而被能与之进行思维和灵魂层面<strong>平等博弈</strong>的“克星”吸引。这是一种对<strong>认知和情感双重镜像</strong>的渴望。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>寻求自我完整性的印证。深层动机是希望通过另一个相似的复杂灵魂，来<strong>确认自身存在的真实性和意义</strong>，结束精神上的孤独流放。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>恐惧型依恋</strong>的INFJ可能既渴望深度连接又害怕被看穿，从而若即若离；<strong>安全型依恋</strong>则能让他们勇敢地敞开最深层的自我。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>INFJ是部落中的<strong>祭司或智慧长者</strong>，负责守护精神传统、调解内部矛盾并预见未来风险。他们的心动模式是对“继承者”或“同行者”的需求——一个能理解其深远洞察并共同守护群体精神火种的人。</p></li>
+            </ul>
+        `
+    },
+    'INFP': {
+        code: 'INFP', title: '调停者', group: 'diplomat',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>通过诗意的表达和哲学的共鸣。INFP的心动常在文学、哲学交流中产生，当有人能理解其摘抄、诗句，并与之进行深层次精神对话时，会强烈心动。</p>
+            <div class="keywords">
+                <span class="keyword">诗意交流</span>
+                <span class="keyword">哲学共鸣</span>
+                <span class="keyword">精神契合</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>价值观驱动（主导功能<strong>内向情感Fi</strong>），通过艺术、哲学等抽象形式表达丰富的内心世界。与INFJ类似，但更专注于内在价值的和谐而非对外洞察。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的INFP</strong>是真诚、善良、富有创造力的理想主义者；<strong>未发展的INFP</strong>可能过于敏感内向，感到被世界误解，容易陷入自我否定的情绪漩涡。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相似性吸引</strong>。渴望在诗意和哲学层面产生<strong>深度的精神与价值观共鸣</strong>。心动于那个能理解其摘抄、读懂其诗句背后整个灵魂的人。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对“真我”的确认与分享。深层动机是渴望有人能<strong>进入其精心守护的内在花园</strong>，并证明这个花园是美丽且值得被爱的。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的INFP可能会在关系中过度付出以寻求价值认可；<strong>安全型依恋</strong>能帮助他们建立自信，明白自己无需完美也值得被爱。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>INFP是部落中的<strong>诗人、艺术家或道德守护者</strong>，负责通过故事和艺术凝聚族群 identity，守护集体的核心价值观。他们的心动模式是对“缪斯”或“知音”的需求——一个能欣赏其内心世界之美并与之共鸣的灵魂。</p></li>
+            </ul>
+        `
+    },
+    'ENFJ': {
+        code: 'ENFJ', title: '主人公', group: 'diplomat',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>对象能融入集体并共享快乐。ENFJ不需要别人多懂自己，但希望对方能积极参与集体，一起创造和维持快乐氛围，而不是需要自己分心照顾。</p>
+            <div class="keywords">
+                <span class="keyword">共享快乐</span>
+                <span class="keyword">融入集体</span>
+                <span class="keyword">氛围制造者</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>天生的和谐营造者和激励者（Fe主导），通过照顾和理解他人（Fe）来实现自身价值，其核心诉求通常是<strong>群体和谐与共同成长</strong>。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>杰出的ENFJ</strong>是富有魅力的领袖，能激发他人最好的一面；<strong>不健康的ENFJ</strong>可能成为控制欲强的“人生导师”，将自己的价值观强加于人，缺乏边界感。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>互补性吸引</strong>。他们通常不需要被照顾，而是需要一个<strong>能并肩作战的“伙伴”</strong>。心动于对方能主动融入其营造的氛围并成为维护者，而非一个需要他们耗费心力去照顾的“客体”。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对等互惠的需求。深层动机是渴望从“给予者”的角色中暂时解脱，体验一种<strong>平等、共享、互惠</strong>的关系，在其中他们也能被滋养。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ENFJ可能会过度介入伴侣的生活，以获取安全感；<strong>安全型依恋</strong>能让他们学会放手，享受一段彼此独立又相互依靠的关系。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ENFJ是部落中的<strong>酋长或社群凝聚者</strong>，负责鼓舞士气、解决纠纷、促进合作。他们的心动模式是对“副手”或“王后/国王”的需求——一个有能力、有魅力且愿意与其共同承担领导责任，共同造福族群的伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ENFP': {
+        code: 'ENFP', title: '竞选者', group: 'diplomat',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>拥有一个永恒的“家”和港湾。ENFP喜欢探索，但常感空虚，需要有一个能为自己修补“损坏零件”、让自己知道家在哪里的人，提供扎根感和归属感。</p>
+            <div class="keywords">
+                <span class="keyword">归属感</span>
+                <span class="keyword">港湾</span>
+                <span class="keyword">修补与接纳</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>热情探索外部世界（Ne主导），但内在（劣势功能<strong>内向感觉Si</strong>）可能缺乏稳定性和连续性，导致“丢三落四”，容易产生一种<strong>无根的空虚感</strong>。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ENFP</strong>是热情洋溢、灵感迸发的探索者和倡导者；<strong>不成熟的ENFP</strong>可能显得注意力涣散、承诺恐惧，无法将兴趣转化为扎实的成果。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相反性吸引</strong>。他们常被“家”的稳定感（Si）所吸引。那个能为其“修理零件”、提供港湾的人，弥补了其最薄弱的短板，提供了他们疯狂探索后可以回归的<strong>安全基地</strong>。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对安全依恋的渴望。深层动机是寻找一个<strong>恒定的、稳定的客体</strong>（客体关系理论），这个客体不会因其不断探索而变化或消失，为其提供终极的情感安全感。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>回避型依恋</strong>的ENFP可能会用“追求自由”作为害怕承诺的借口；<strong>安全型依恋</strong>能让他们明白，真正的自由包含了选择坚守的勇气。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ENFP是部落中的<strong>探索者、信使或外交官</strong>，负责探索新领地、建立联盟、带回新信息。他们的心动模式是对“根据地”的需求——一个无论他们航行多远，永远为其亮着灯塔、等待其归家的港湾。</p></li>
+            </ul>
+        `
+    },
+    'ISTJ': {
+        code: 'ISTJ', title: '物流师', group: 'sentinel',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>生活被注入新鲜感。ISTJ习惯公式化生活，但隐藏着收藏鉴赏和回味新体验的诉求。若有人能带给他们有意思的新经历，并让其不知不觉深陷其中，会心动。</p>
+            <div class="keywords">
+                <span class="keyword">新鲜经历</span>
+                <span class="keyword">打破常规</span>
+                <span class="keyword">缓慢深陷</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>追求安全、稳定、可预测的系统（Si主导），生活高度程式化。其“隐藏诉求”常源于劣势功能<strong>外向直觉（Ne）</strong> 对新鲜体验和可能性的压抑性渴望。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ISTJ</strong>是可靠、尽责、值得信赖的基石，甚至能展现出不错的幽默感；<strong>僵化的ISTJ</strong>可能变得固执、害怕任何改变，拒绝一切新想法，难以适应变化的环境。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相反性吸引</strong>。常被能带来“新经历”的人吸引。对方激活了其被压抑的Ne，以一种<strong>安全、可控的方式</strong>（“不知不觉深陷其中”）将其带出舒适区，满足了其对“有趣生活”的深层渴望。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对压抑本能的解放。深层动机是希望在<strong>不破坏核心安全感的前提下</strong>，体验生活的丰富性和可能性，避免人生陷入僵化和乏味。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>回避型依恋</strong>的ISTJ会强化其保守倾向，拒绝任何计划外的可能性；<strong>安全型依恋</strong>则能给予他们足够的安全感，去尝试一些小小的“冒险”。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ISTJ是部落中的<strong>档案管理员、会计师或守护者</strong>，负责守护祖先的智慧、管理重要资源和确保传统延续。他们的心动模式是对一位“谨慎的探险家”的需求——一个能带来新资源、新见闻，但绝不会危及他们精心守护的“仓库”的可靠伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ISFJ': {
+        code: 'ISFJ', title: '守卫者', group: 'sentinel',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>付出被看见和回报。ISFJ常默默付出，不需大量感谢，但若有人能记住其喜好、需求，并用实际行动体现重视（哪怕笨拙），他们会非常动容，感觉付出值得。</p>
+            <div class="keywords">
+                <span class="keyword">被记住喜好</span>
+                <span class="keyword">实际行动</span>
+                <span class="keyword">重视与回报</span>
+            </div>
+        `,
+        detailed_html: `
+             <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>通过实际行动服务和付出（Si-Fe）来维系关系与和谐，但常常忽略自身需求，导致<strong>被习惯性怠慢</strong>，容易产生委屈感。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ISFJ</strong>是温暖、体贴、无比可靠的照顾者；<strong>不健康的ISFJ</strong>可能成为一个默默牺牲的“殉道者”，心怀怨愤，或用 guilt trip（让对方内疚）的方式来变相索取回报。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>互惠性吸引</strong>。心动于“被看见”和“被回报”。对方“付诸行动”的关怀，是对其付出价值的<strong>终极肯定</strong>，证明他们的爱不是单向的，而是被珍视和回馈的。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对价值确认的渴望。深层动机是希望自己的付出能在一个重要他人身上得到<strong>情感上的等价回报</strong>，从而确认自己不是一个“好人工具”，而是一个被爱的、有价值的个体。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ISFJ可能会过度付出，试图“购买”爱和关注；<strong>安全型依恋</strong>能帮助他们建立健康的边界，学会坦率地表达自己的需求。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ISFJ是部落中的<strong>养育者、疗愈师和传统工匠</strong>，负责照顾老幼病弱、准备食物、传承手艺和维持日常秩序。他们的心动模式是对“感恩的接受者”的需求——一个能看见、珍惜并回报其辛勤劳动，让其感到一切付出都值得的伴侣。</p></li>
+            </ul>
+        `
+    },
+    
+    // ... 此处省略了部分数据以适应单次输出的长度限制
+    
+};
+
+</script>
+</body>
+</html><script>
+// 这是 Part 1 中 <script> 标签的继续...
+
+// 填充剩余的人格数据
+Object.assign(personalityData, {
+    'ESTJ': {
+        code: 'ESTJ', title: '总经理', group: 'sentinel',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>被“调音师”兜底放松。ESTJ对自己要求严苛，像机器一样守规则，容易紧绷。当有一个既松弛又灵活的人帮其兜底，用结果证明“天不会塌”，他们会心动。</p>
+            <div class="keywords">
+                <span class="keyword">松弛兜底</span>
+                <span class="keyword">灵活可靠</span>
+                <span class="keyword">证明放松</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>与外部规则和制度高度认同（Te-Si），像一台精密机器要求自己，<strong>压抑了劣势功能内向直觉（Ni）</strong> 对灵活性和宏观可能性的感知，容易导致焦虑和紧绷。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ESTJ</strong>是高效、负责、卓越的组织者；<strong>不健康的ESTJ</strong>可能成为僵化、专横、不容置疑的“暴君”，无法容忍任何偏离规则的行为。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相反性吸引</strong>。常被“既松弛又灵活”的人吸引。对方示范了其被压抑的劣势功能（Ni-Se）的运作方式，并用成果向其证明：<strong>放松并不会导致灾难（天不会塌）</strong>，从而缓解其核心焦虑。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对超我严格性的松绑。深层动机是渴望从一个<strong>严格的“自我监工”</strong> 角色中解放出来，允许自己体验不确定性和灵活性，而不产生内疚和焦虑。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ESTJ可能会试图严格控制伴侣的一切来获得安全感；<strong>安全型依恋</strong>则能让他们学会下放权力，相信事情不按自己的方式发展也能有好结果。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ESTJ是部落中的<strong>酋长、法官或项目总管</strong>，负责制定规则、分配任务、裁决纠纷并确保集体高效运转。他们的心动模式是对一位“顾问”或“宫廷小丑”的需求——一个能提供不同视角、提醒他们放松、并在不挑战其权威的情况下带来欢乐与灵活的伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ESFJ': {
+        code: 'ESFJ', title: '执政官', group: 'sentinel',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>在脆弱时被专业且“叛逆”地关怀。ESFJ通常是健康专家，但在生病等脆弱时可能做出格行为。若有人能展现靠谱专业，同时又带点“花月禁忌”的叛逆关怀，会心动。</p>
+            <div class="keywords">
+                <span class="keyword">专业叛逆</span>
+                <span class="keyword">脆弱关怀</span>
+                <span class="keyword">跨越禁忌</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>作为“健康专家”，遵循规范（Fe-Si），维护群体健康与和谐。其“出格行为”可能是压力下<strong>劣势功能内向直觉（Ni）</strong> 的叛逆性爆发，是对严格自我规训的反抗。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ESFJ</strong>是热情、慷慨、人见人爱的“黏合剂”；<strong>不健康的ESFJ</strong>可能变得爱管闲事、八卦、甚至通过散布焦虑来维持群体凝聚力，过度干涉他人生活。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相反性吸引</strong>。常被“靠谱专业”又“叛逆”的关怀吸引。这既满足了其主导功能Fe对“可靠”的需求，又<strong>安全地触碰了其想打破规则的隐藏欲望</strong>，是一种在安全范围内对禁忌的探索。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对压抑的阴影冲动的探索。深层动机是渴望在一個值得信賴的客體的陪伴下，<strong>短暂地释放被社会规范压抑的“阴影自我”</strong>，体验一种越轨的快感。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ESFJ可能极度害怕被社群排斥，从而过度迎合他人；<strong>安全型依恋</strong>能让他们有勇气做一点真实的自己，即使那不完全符合期待。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ESFJ是部落中的<strong>庆典筹划者、社交主持人和道德监督员</strong>，负责组织活动、维系人际关系、确保每个人都遵守社交规范并被群体接纳。他们的心动模式是对“秘密情人”的需求——一个在公开场合是完美伴侣，在私下却能带他们偶尔逃离世俗眼光，体验一点点刺激和叛逆的人。</p></li>
+            </ul>
+        `
+    },
+    'ISTP': {
+        code: 'ISTP', title: '鉴赏家', group: 'explorer',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>“好看”且能理性自洽。ISTP是颜控，但更注重将对方“看顺眼”——找到欣赏的特定角度/气质（如某种帅的分类）。同时希望对方能理性照顾氛围，不吵不闹。</p>
+            <div class="keywords">
+                <span class="keyword">颜值顺眼</span>
+                <span class="keyword">气质分类</span>
+                <span class="keyword">理性氛围</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>冷静的观察者，依赖逻辑和实用主义（Ti-Se）。其“看顺眼”是一种高度个人化的、基于Ti的<strong>审美分类和建模系统</strong>，而非纯粹的社会化审美。他们享受亲手操作和解决实际问题的过程。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ISTP</strong>是机智、灵活、临危不乱的问题解决者，如同“工匠”或“工程师”；<strong>不健康的ISTP</strong>可能变得疏离、愤世嫉俗，沉迷于感官刺激而逃避复杂情感和责任。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>相似性吸引（氛围层面）</strong>。他们常被“理性照顾氛围”的人吸引。这本质上是对另一种<strong>高效、不费事的系统（Ti）</strong> 的欣赏，对方能管理好环境（Se场域），让其可以舒适地沉浸在自己的思维或爱好中，无需被打扰。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对高效互动的需求。深层动机是寻找一个<strong>无需消耗过多情感能量即可和谐共处的伴侣</strong>，对方能理解并尊重其需要个人空间的边界，同时能管理好共享的物理环境。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>回避型依恋</strong>会强化ISTP的疏离倾向，让他们在情感上几乎完全无法接近；<strong>安全型依恋</strong>能让他们学会在保持独立的同时，享受偶尔的情感互动。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ISTP是部落中的<strong>工匠、猎手或战术家</strong>，负责制造维修工具、追踪猎物并制定实战策略。他们的心动模式是对一位“高效队友”的需求——一个能在物理世界和任务中与其默契配合、不拖后腿、且尊重彼此专业领域的伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ISFP': {
+        code: 'ISFP', title: '探险家', group: 'explorer',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>被完全包容和接纳。ISFP大部分时间不管别人死活，但当想管一个人又怕被嫌烦时，若对方完全包容其所有行为，会产生幸福感、安全感和心动。</p>
+            <div class="keywords">
+                <span class="keyword">完全接纳</span>
+                <span class="keyword">包容捣乱</span>
+                <span class="keyword">微妙试探</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>通常活在当下，专注于个人体验和价值观（Fi-Se）。其“不管别人死活”是Fi专注于内部价值的结果。但其辅助功能<strong>外向感觉（Se）</strong> 使其能敏锐捕捉微观细节，并通过艺术或行动表达自我。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ISFP</strong>是审美出众、敏感且富有同情心的艺术家，能通过作品感动他人；<strong>未发展的ISFP</strong>可能显得过于自我中心、被动退缩，难以将内在的价值观转化为实际行动。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>无条件接纳</strong>。心动于“完全的包容和接纳”。这为其提供了一个<strong>绝对安全的情感试验场</strong>，让他们可以用Se功能进行俏皮的、微妙的试探，而Fi核心的脆弱自我不必担心被评判和伤害。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对真实自我的呈现。深层动机是渴望在一个<strong>绝对安全的关系中</strong>，勇敢地展现那个通常被隐藏的、需要与他人建立连接的、敏感的自我。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ISFP可能会在关系中过度讨好，压抑真实自我以换取接纳；<strong>安全型依恋</strong>则给予他们勇气，相信做自己同样会被爱。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ISFP是部落中的<strong>艺术家、草药师或和平维护者</strong>，负责用美丽的事物装饰家园、识别药用植物并以温和的方式化解冲突。他们的心动模式是对“缪斯”或“庇护所”的需求——一个能欣赏其独特美感与温柔特质，并提供情感庇护让其自由创作的伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ESTP': {
+        code: 'ESTP', title: '企业家', group: 'explorer',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>遇到有深度的“神秘吸引力”。ESTP表面灵活自如，但隐藏对深度的渴望。当现实中出现有深度的对象，会形成神秘吸引力。长期心动需对方保持神秘感+新鲜感，或提供家的自由空间。</p>
+            <div class="keywords">
+                <span class="keyword">深度神秘</span>
+                <span class="keyword">新鲜感</span>
+                <span class="keyword">家的自由</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>灵活、适应性强，活在当下（Se主导），享受现实世界的成功与刺激。其“对深度的隐藏诉求”可能源于劣势功能<strong>内向直觉（Ni）</strong>，即对意义、模式和未来可能性的无知觉渴望。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ESTP</strong>是富有魅力、胆大心细的实干家和谈判家；<strong>不健康的ESTP</strong>可能变得鲁莽、投机、享乐主义，逃避一切深度思考和责任，给人浅薄不可靠的印象。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>互补性吸引</strong>。常被“有深度的对象”的神秘感吸引。对方满足了其被压抑的Ni需求，提供了超越感官刺激的<strong>智力上的挑战和探索空间</strong>，同时“家的自由空间”又保证了其Se主导的自由不被剥夺。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对存在意义的探索。深层动机是超越浮华的表面成功，渴望触碰一些<strong>更永恒、更深刻的东西</strong>，以平衡过于关注当下所带来的意义空虚感。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>回避型依恋</strong>的ESTP可能会不断追求新鲜刺激来逃避情感上的亲密和承诺；<strong>安全型依恋</strong>能让他们安定下来，享受深度连接带来的另一种满足。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ESTP是部落中的<strong>侦察兵、交易商或冒险家</strong>，负责探索新领土、与外界交易、并迅速应对突发危险。他们的心动模式是对一位“军师”或“归宿”的需求——一个能为其长远未来出谋划策（补足Ni），同时又能作为其精彩冒险后可以回归的稳定大本营的伴侣。</p></li>
+            </ul>
+        `
+    },
+    'ESFP': {
+        code: 'ESFP', title: '表演者', group: 'explorer',
+        simple_html: `
+            <h2><span class="icon">💖</span> 心动点</h2>
+            <p>细腻一面被照顾。ESFP常是开心果，但隐藏个人诉求。若有人能不只看重其热情，而是照顾到其细腻敏感的一面，会大大心动。</p>
+            <div class="keywords">
+                <span class="keyword">看见细腻</span>
+                <span class="keyword">超越表面</span>
+                <span class="keyword">敏感关怀</span>
+            </div>
+        `,
+        detailed_html: `
+            <ul>
+                <li data-icon="🎭"><h4><span>🎭</span>表面特质与心理模式</h4><p>热情洋溢，是群体的焦点和能量来源（Se-Fi）。其“强迫式维系和谐”是<strong>外向感觉（Se）</strong> 与 <strong>内向情感（Fi）</strong> 结合的表现，但过度发展会掩盖其深度。他们通过行动和表现来表达关怀。</p></li>
+                <li data-icon="📈"><h4><span>📈</span>发展水平的影响</h4><p><strong>健康的ESFP</strong>是慷慨、体贴、充满活力的即兴表演者，能给人带来快乐和温暖；<strong>不健康的ESFP</strong>可能显得肤浅、戏剧化、过度寻求关注，甚至为了活跃气氛而忽视他人感受。</p></li>
+                <li data-icon="💖"><h4><span>💖</span>心动瞬间核心</h4><p><strong>被看穿</strong>。心动于有人能穿透其“开心果”的表演面具，<strong>照顾到其细腻敏感（Fi）的一面</strong>。这是一种“被真正看见”的体验，对方爱的不是其创造的热闹（Se），而是热闹之下的那个真实的人。</p></li>
+                <li data-icon="🧠"><h4><span>🧠</span>深层心理因素</h4><p>对真实连接的渴望。深层动机是渴望超越<strong>角色化的表演</strong>，建立基于真实情感的、深刻的、一对一的亲密连接，证明自己除了带来快乐，本身也是值得被爱的。</p></li>
+                <li data-icon="🔗"><h4><span>🔗</span>依恋风格提示</h4><p><strong>焦虑型依恋</strong>的ESFP可能极度依赖外界的关注和赞美来确认自我价值；<strong>安全型依恋</strong>能帮助他们将自我价值感内化，明白即使不做焦点，自己也依然有价值。</p></li>
+                <li data-icon="🌿"><h4><span>🌿</span>进化心理学视角</h4><p>ESFP是部落中的<strong>表演者、庆典核心和气氛调动者</strong>，负责通过歌舞和故事振奋人心、强化群体凝聚力、庆祝丰收与胜利。他们的心动模式是对“头号粉丝”或“知心人”的需求——一个能为其精彩表演喝彩，但更重要的，是在幕布落下后愿意倾听其心声、看到其疲惫的伴侣。</p></li>
+            </ul>
+        `
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    // DOM元素获取
+    const pages = document.querySelectorAll('.page');
+    const coverPage = document.getElementById('cover-page');
+    const selectionPage = document.getElementById('selection-page');
+    const detailPage = document.getElementById('detail-page');
+    const personalityGrid = document.getElementById('personality-grid');
+    const backButton = document.getElementById('back-button');
+    const screenshotButton = document.getElementById('screenshot-button');
+    let currentType = null;
+
+    // 页面切换函数
+    function switchPage(activePageId) {
+        pages.forEach(page => {
+            page.classList.toggle('active', page.id === activePageId);
+        });
+        window.scrollTo(0, 0); // 切换后滚动到页面顶部
+    }
+
+    // 动态生成选择卡片
+    const typesOrder = ['INTJ', 'INTP', 'ENTJ', 'ENTP', 'INFJ', 'INFP', 'ENFJ', 'ENFP', 'ISTJ', 'ISFJ', 'ESTJ', 'ESFJ', 'ISTP', 'ISFP', 'ESTP', 'ESFP'];
+    typesOrder.forEach(type => {
+        const data = personalityData[type];
+        const card = document.createElement('a');
+        card.href = "#";
+        card.className = `personality-select-card ${data.group}`;
+        card.dataset.type = type;
+        card.innerHTML = `<div class="code">${data.code}</div><div class="title">${data.title}</div>`;
+        personalityGrid.appendChild(card);
+    });
+
+    // 封面页点击事件
+    coverPage.addEventListener('click', () => {
+        coverPage.style.opacity = '0';
+        setTimeout(() => {
+            switchPage('selection-page');
+            coverPage.style.display = 'none'; // 动画结束后彻底隐藏
+        }, 500);
+    });
+    
+    // 选择卡片点击事件
+    personalityGrid.addEventListener('click', (e) => {
+        e.preventDefault();
+        const card = e.target.closest('.personality-select-card');
+        if (card) {
+            currentType = card.dataset.type;
+            const data = personalityData[currentType];
+            
+            // 动态填充详情页
+            document.getElementById('detail-code-title').textContent = `${data.code} · ${data.title}`;
+            document.getElementById('detail-subtitle').textContent = `深层心理动机与心动瞬间分析`;
+            document.getElementById('simple-content').innerHTML = data.simple_html;
+            document.getElementById('detailed-content').innerHTML = data.detailed_html;
+            
+            // 更新颜色主题
+            const activeColor = getComputedStyle(document.documentElement).getPropertyValue(`--color-${data.group}`);
+            const detailHeader = document.getElementById('detail-header');
+            detailHeader.style.backgroundColor = activeColor;
+            
+            const root = document.documentElement;
+            root.style.setProperty('--active-color', activeColor);
+            root.style.setProperty('--bg-tint', `${activeColor}20`); // 20是16进制的透明度
+
+            // 重置到默认Tab
+            resetTabs();
+            switchPage('detail-page');
+        }
+    });
+    
+    // Tab切换逻辑
+    const simpleTabBtn = document.getElementById('simple-tab-btn');
+    const detailedTabBtn = document.getElementById('detailed-tab-btn');
+    const simpleContent = document.getElementById('simple-content');
+    const detailedContent = document.getElementById('detailed-content');
+
+    function resetTabs(){
+        simpleTabBtn.classList.add('active');
+        detailedTabBtn.classList.remove('active');
+        simpleContent.classList.add('active');
+        detailedContent.classList.remove('active');
+    }
+
+    simpleTabBtn.addEventListener('click', () => {
+        resetTabs();
+    });
+
+    detailedTabBtn.addEventListener('click', () => {
+        simpleTabBtn.classList.remove('active');
+        detailedTabBtn.classList.add('active');
+        simpleContent.classList.remove('active');
+        detailedContent.classList.add('active');
+    });
+
+    // 返回按钮
+    backButton.addEventListener('click', () => {
+        switchPage('selection-page');
+    });
+
+    // 截图按钮
+    screenshotButton.addEventListener('click', () => {
+        const captureArea = document.getElementById('capture-area');
+        const originalBackgroundColor = captureArea.style.backgroundColor;
+        captureArea.style.backgroundColor = 'white'; // 确保截图背景是白色
+        
+        html2canvas(captureArea, {
+            scale: 2, // 提高截图分辨率
+            useCORS: true, // 允许跨域图片（如有）
+            logging: false
+        }).then(canvas => {
+            // 恢复原始背景色
+            captureArea.style.backgroundColor = originalBackgroundColor;
+
+            // 创建下载链接
+            const link = document.createElement('a');
+            const data = personalityData[currentType];
+            const activeTab = simpleContent.classList.contains('active') ? '心动速写' : '深度动机';
+            link.download = `${data.code}_${data.title}_${activeTab}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        });
+    });
+});
+</script>
+</body>
+</html>
